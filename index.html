@@ -142,6 +142,8 @@ function getList(obj, key, suffix) { // returns an array with the values of all 
     
 function showIndi(ref) { // show the indiviudal ref
     var elem, elem1, indi, indi2, famList, famKey, fam, famInfo, childList, childKey, childInfo, spouse, spouseId, p;
+	var dbg;
+	
     indi=ged[ref + '.0.'];
     if (!indi) {
         alert('Individual with key ' + ref  + ' not found.');
@@ -151,12 +153,14 @@ function showIndi(ref) { // show the indiviudal ref
     var male=true;
     if (indi['SEX.0']) male = (indi['SEX.0']=='M') || (indi['SEX.0']=='m');
     elem = document.getElementById('title');
-    elem.innerHTML = 'Ahnenblatt von ' + indi['NAME.0'].replace(/\//g, '');
+    elem.innerHTML = ' ' + indi['NAME.0'].replace(/\//g, ' ');
     elem = document.getElementById( male ? 'g12' : 'g13');
     elem.innerHTML = getIndiInfo(ref,1,0,1); // Person
-    showIndiPic(ref,male ? 'p12' : 'p13'); // picture
+//	showIndiPic(ref,male ? 'p12' : 'p13'); // picture
     elem = document.getElementById( male ? 'g11' : 'g14');
-    elem.innerHTML = getSiblingsInfo(ref);
+    dbg=getSiblingsInfo(ref)
+//	elem.innerHTML = fmtFs(dbg);  //EM
+	elem.innerHTML = dbg;
     elem = document.getElementById( male ? 'g13' : 'g12');
     elem.innerHTML='';
     elem1 = document.getElementById( male ? 'g14' : 'g11');
@@ -183,7 +187,7 @@ function showIndi(ref) { // show the indiviudal ref
             childInfo+=getIndiInfo(childList[childKey],0,1+(famKey-0), famList.length); // Kinder
         }
     }
-    showIndiPic(spouseId,male ? 'p13' : 'p12');
+    //showIndiPic(spouseId,male ? 'p13' : 'p12');
     elem = document.getElementById('ehe');
     elem.innerHTML=famInfo;
     elem = document.getElementById('childrenCol'); // IE does not support assigning innerHTML to a tbody; this is a workaround
@@ -276,24 +280,43 @@ function showIndiPic(ref,elemName) { // returns
             }
         }
     }
-}
-     
-            
+}  
 
-function getIndiInfo(ref,level,famNr,famCount) { // level=0 : Kinder, =1: Eltern, =2: Großeletern, =3: Urgroßeltern, =4: Tante/Onkel, =5: deren Gatten/Partner; =6 history
-    var tmp, gebDat, gebOrt, todDat, todOrt, famList, famKey, fam;
-    if (!ref) return '';
+function getIndiInfo(ref,level,famNr,famCount) { 
+			// level=0: Enfants
+			//		=1: Parents
+			//		=2: Grands-parents
+			//		=3: Arrières grands-parents
+			//		=4: Tantes et Oncles
+			//		=5: Conjoints
+			//		=6: Historique
+    var tmp, birthDate, birthPlace, deathDate, deathPlace, famList, famKey, fam;
+    
+	if (!ref) {
+		return '';
+	}
     var indi=ged[ref + '.0.'];
     var jsFunc= '"javascript:showIndi(' + "'" + ref + "')" + '"';
     var ret='<div class="div' + level + '">';
     var indiName=indi['NAME.0'];
     var p1 = indiName.indexOf('/');
     var p2 = indiName.indexOf('/',p1+1);
-    if ((level!=5) && (p1>=0) && (p2>0)) indiName=indiName.substr(0,p1) + ( (level!=4) ? '<strong>' + indiName.substr(p1+1, p2-p1-1) + '</strong>' : '') + indiName.substr(p2+1);
-    else if ((p1>=0) && (p2>0)) indiName=indiName.substr(0,p1) + indiName.substr(p1+1, p2-p1-1) + indiName.substr(p2+1);
-    if (indiName.substr(indiName.length-1)==' ') indiName=indiName.substr(0,indiName.length-1);
-    if (level==4) indiName='<strong>' + indiName +'</strong>';
-    indiName='<a href=' + jsFunc + ' title="Wechsel zum Ahnenblatt dieser Person anzeigen">' + indiName + '</a>';
+    if ((level!=5) && (p1>=0) && (p2>0)) {
+		indiName=indiName.substr(0,p1) + ( (level!=4) ? '  <strong>' + indiName.substr(p1+1, p2-p1-1) + '</strong>' : '') + indiName.substr(p2+1);
+	}
+    else if ((p1>=0) && (p2>0)) {
+		indiName=indiName.substr(0,p1) + ' '+indiName.substr(p1+1, p2-p1-1) + indiName.substr(p2+1);
+	}
+
+    if (indiName.substr(indiName.length-1) == ' ') {
+		indiName=indiName.substr(0,indiName.length-1);
+	}
+
+    if (level==4) {
+		indiName='<strong>' + indiName +'</strong>';
+	}
+    indiName='<a href=' + jsFunc + ' title="Afficher le détail">' + indiName + '</a>';
+
     var geb = indi['BIRT.0.'];
     if (geb) {
         gebDat=geb['DATE.0'];
@@ -366,11 +389,11 @@ function getSiblingsInfo(ref) {
         childList = getList(fam,'CHIL','');
         for (ind2 in childList) {           
             indiKey=childList[ind2];
-            if (ind2>0) ret+='<div class="separator">,</div>';
+            if (ind2>0) ret+='<div class="separator"></div>';
             ret+='<div class="sibling">';
-            if (indiKey==ref) ret+='*';
+            if (indiKey==ref) ret+='';
             else {
-                ret+=getIndiInfo(indiKey,4,0,0);
+                ret+=getIndiInfo(indiKey,4,0,0) + '<br>';
                 indi=ged[indiKey + '.0.'];
                 male=true;
                 if (indi['SEX.0']) male = (indi['SEX.0']=='M') || (indi['SEX.0']=='m');
@@ -379,8 +402,13 @@ function getSiblingsInfo(ref) {
                     famKey=famList[ind1];
                     fam = ged[famKey + '.0.'];
                     indiKey=fam[male ? 'WIFE.0' : 'HUSB.0'];
-                    if (indiKey) ret+=getIndiInfo(indiKey,5,0,0);
+                    if (indiKey) {
+						ret+='&emsp;';
+						ret+=getIndiInfo(indiKey,5,0,0);
+						
+					}
                 }
+				ret+='<br>';
             }
             ret+='</div>';
         }
@@ -431,18 +459,13 @@ function getDetailInfo(obj, level, ref) {
     }
     return ret;
 }
-            
-           
-    
-    
-    
 
 function formatDate (d,sym) {
     if (!d) return '';
     var mList= '.JAN.FEB.MAR.APR.MAY.JUN.JUL.AUG.SEP.OCT.NOV.DEC.';
     var parts=d.match(/(\d*)\s*([A-Za-z]*)\s*(\d*)/);
     var ret='';
-    if (sym>0) ret=' *+'.substr(sym,1) + ((sym==3) ? '<span class="oo">oo</span>' : '');
+    if (sym>0) ret=' '.substr(sym,1) + ((sym==3) ? '<span>Mariage : </span>' : '');
     if (parts[2]!='') {
         var p1=mList.indexOf('.' + parts[2] + '.');
         p1=p1/4+1;
@@ -453,14 +476,21 @@ function formatDate (d,sym) {
     else ret+= d;
     return ret;
 }
+
 function search() {
     var ret, inp, dat, indi, erg, elem, p, gedKey;
     var mList= '.JAN.FEB.MAR.APR.MAY.JUN.JUL.AUG.SEP.OCT.NOV.DEC.';
-    inp=prompt('Geben Sie bitte einen Namen(steil) (Vorname Nachname) oder ein Geburtsdatum (TT.MM.JJJJ) bzw. ein Geburtsjahr an.','')
-    if (!inp) return;
+    inp=prompt('Entrez un nom (abrupt) (prénom) ou une date de naissance (jj.mm.aaaa) ou une année de naissance.','')
+    
+	if (!inp) {
+		return;
+	}
     dat=inp.match(/(\d+)\.\s+(\d+)\.\s+(\d+)/);
-    if (dat) inp=dat[1] + ' ' + mList.substr(dat[2]*4-3,3) + dat[3];
-    else dat=inp.match(/(\d+)/);
+    if (dat) {
+		inp=dat[1] + ' ' + mList.substr(dat[2]*4-3,3) + dat[3];
+    } else {
+		dat=inp.match(/(\d+)/);
+	}
     inp=inp.toLowerCase();
     ret='';
     for (gedKey in ged) {
@@ -468,15 +498,23 @@ function search() {
             if (ged[gedKey]=='INDI') {
                 indi=ged[gedKey+'.'];
                 erg=indi[dat ? 'BIRTH.0' : 'NAME.0'].replace(/\//,'');
-                if (dat && erg) erg=erg['DATE.0'];
-                if (erg) erg = erg.toLowerCase().indexOf(inp)+1;
-                if (erg) ret+=getIndiInfo(gedKey.substr(0,gedKey.length-2),6,0,0);
+                if (dat && erg) {
+					erg=erg['DATE.0'];
+				}
+                if (erg) {
+					erg = erg.toLowerCase().indexOf(inp)+1;
+				}
+                if (erg) {
+					ret += getIndiInfo(gedKey.substr(0,gedKey.length-2),6,0,0);
+				}
             }
         }
     }
     elem=document.getElementById('info'); // IE does not support assigning innerHTML to a tbody; this is a workaround
     p=elem.innerHTML.indexOf('<TBODY id=');
-    if (p<0) p=elem.innerHTML.indexOf('<tbody id=');
+    if (p<0) {
+		p=elem.innerHTML.indexOf('<tbody id=');
+	}
     p=elem.innerHTML.indexOf('>',p);
     elem.innerHTML=elem.innerHTML.substr(0,p+1) + '<tr><td colspan="2">' + ret + '</td></tr></tbody></table>';
 }      
@@ -748,7 +786,7 @@ h1 {
                     <col width="20%">
                     <col width="22%">
                     <tbody>
-                        <tr><td>#</td><td>Name</td><td>Geb.Datum</td><td>Geb.Ort</td><td>Sterb.Datum</td><td>Sterbeort</td><td>Partner</td></tr>
+                        <tr><td>#</td><td>Nom</td><td>Naissance</td><td>Lieu</td><td>Décès</td><td>Lieu</td><td>Conjoint</td></tr>
                     </tbody>
                     <tbody id="g0">
                     </tbody>
@@ -756,7 +794,7 @@ h1 {
             </td>
         </tr>
         <tr>
-            <td colspan="14" class="buttons"><a href="javascript:search()" title="Person suchen">Suche</a></td>
+            <td colspan="14" class="buttons"><a href="javascript:search()" title="Person suchen">Détail fiche GEDCOM :</a></td>
         </tr>
         <tr>
             <td colspan="12" id="info">
@@ -767,7 +805,7 @@ h1 {
                     </tbody>
                 </table>
             </td>
-            <td colspan="2" id="colHistory">Letzte Ahnenblätter:<div id="lastVisits"></div></td>
+            <td colspan="2" id="colHistory">Récemment consultés :<br><br><div id="lastVisits"></div></td>
         </tr>
     <table>   
 </body>
