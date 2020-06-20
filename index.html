@@ -14,10 +14,6 @@ function start() {
         elem=document.getElementById('title');
         elem.innerHTML=params['title'];
     }
-//    if (params['stitle']) {
-//        elem=document.getElementById('stitle');
-//        elem.innerHTML=params['stitle'];
-//    }
     if (params['hints']!='') {
         elem=document.getElementById('hints');
         elem.innerHTML=params['hints'].replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<break />');
@@ -31,19 +27,25 @@ function start1(ind) {
     elem.style['display']='none';
     elem=document.getElementById('browserTab');
     elem.style['visibility']='visible';
-    if (params['startWith']) showIndi('@I01883@'); //showIndi(params['startWith']);
+    if (params['startWith']) showIndi(ind);
     else alert('No Individual-key found to start with.');
 }    
 
 function fmtLieu(src) {
     var ind, ret, tmp;
 	
-	if (!src) return;
+	if (!src) {
+		return;
+	} else {
+	    var lieux=src.split(',');
+	}
 	
-    var lieux=src.split(',');
-
 	if ((lieux.length)>=5) {
-		ret = '&emsp; '+lieux[0]+' ('+lieux[1].trim()+')<br>'+'&emsp; '+lieux[4].trim();
+		ret = '&emsp; '+lieux[0]
+		if (lieux[1].trim() != '-') {
+			ret = ret + ' (' + lieux[1].trim() + ')';
+		}
+		ret = ret + '<br>'+'&emsp; '+lieux[4].trim();
 	} else {
 		if (lieux.length>=1) {
 			ret = lieux[0];
@@ -59,11 +61,13 @@ function fmtDate(src) {
     var fList= ['janv','fév','mars','avril','mai','juin','juil','aout','sept','oct','nov','déc'];
     var jj,mm,aa,str,ind, ret, tmp;
 	
-	ret='- - -';
-	if (!src) return ret;
+	if (!src) {
+		return ret;
+	} else {
+		var dt=src.split(' ');
+	}
 	
-    var dt=src.split(' ');
-
+	ret='???';
 	if (dt[0]=='BEF') {
 		//
 		// Cas de la date 'before' : BEF 2222
@@ -151,15 +155,29 @@ function showIndi(ref) { // show the indiviudal ref
     }
     addHistory(ref);
     var male=true;
-    if (indi['SEX.0']) male = (indi['SEX.0']=='M') || (indi['SEX.0']=='m');
+    if (indi['SEX.0']) {
+		male = (indi['SEX.0']=='M') || (indi['SEX.0']=='m');
+	}
     elem = document.getElementById('title');
-    elem.innerHTML = ' ' + indi['NAME.0'].replace(/\//g, ' ');
+	
+	var sosa='';
+	if (indi['_SOS.0']) {
+		sosa = indi['_SOS.0'].split(' ');
+		if (sosa.length == 2) {
+			gen = sosa[1];		 
+		}
+	}
+	var sTitle = indi['NAME.0'].replace(/\//g, ' ')
+	if (indi['OCCU.0']) {
+		sTitle = sTitle + '<h3>' + indi['OCCU.0'] + '</h3>'
+	}
+	sTitle = sTitle + '<h3><p class="generation">Génération ' + gen + '</p></h3>';
+	
+    elem.innerHTML = sTitle;
     elem = document.getElementById( male ? 'g12' : 'g13');
     elem.innerHTML = getIndiInfo(ref,1,0,1); // Person
-//	showIndiPic(ref,male ? 'p12' : 'p13'); // picture
     elem = document.getElementById( male ? 'g11' : 'g14');
     dbg=getSiblingsInfo(ref)
-//	elem.innerHTML = fmtFs(dbg);  //EM
 	elem.innerHTML = dbg;
     elem = document.getElementById( male ? 'g13' : 'g12');
     elem.innerHTML='';
@@ -307,31 +325,28 @@ function getIndiInfo(ref,level,famNr,famCount) {
     else if ((p1>=0) && (p2>0)) {
 		indiName=indiName.substr(0,p1) + ' '+indiName.substr(p1+1, p2-p1-1) + indiName.substr(p2+1);
 	}
-
     if (indiName.substr(indiName.length-1) == ' ') {
 		indiName=indiName.substr(0,indiName.length-1);
 	}
-
     if (level==4) {
 		indiName='<strong>' + indiName +'</strong>';
 	}
     indiName='<a href=' + jsFunc + ' title="Afficher le détail">' + indiName + '</a>';
-
-    var geb = indi['BIRT.0.'];
-    if (geb) {
-        gebDat=geb['DATE.0'];
-        gebOrt=geb['PLAC.0'];
+    var birth = indi['BIRT.0.'];
+    if (birth) {
+        birthDate=fmtDate(birth['DATE.0']);
+    	birthPlace=fmtLieu(birth['PLAC.0']);
     }
-    var tod = indi['DEAT.0.'];
-    if (tod) {
-        todDat=tod['DATE.0'];
-        todOrt=tod['PLAC.0'];
+    var death = indi['DEAT.0.'];
+    if (death) {
+        deathDate=fmtDate(death['DATE.0']);
+    	deathPlace=fmtLieu(death['PLAC.0']);
     }
     var male=true;
     if (indi['SEX.0']) male = (indi['SEX.0']=='M') || (indi['SEX.0']=='m');
     if (level==0) {
-        ret='<tr><td>' + ((famCount>1) ? famNr : '') + '</td><td>' + indiName + '</td><td>' + formatDate(gebDat,0) + '</td><td>' + ( gebOrt ? gebOrt : '');
-        ret+= '</td><td>' + formatDate(todDat,0) + '</td><td>' + ( todOrt ? todOrt : '') + '</td><td>';
+        ret='<tr><td>' + ((famCount>1) ? famNr : '') + '</td><td>' + indiName + '</td><td>' + fmtDate(birthDate,0) + '</td><td>' + ( birthPlace ? birthPlace : '');
+        ret+= '</td><td>' + fmtDate(deathDate,0) + '</td><td>' + ( deathPlace ? deathPlace : '') + '</td><td>';
         famList=getList(indi,'FAMS','');
         for (famKey in famList) {
             fam=ged[famList[famKey] + '.0.'];
@@ -344,28 +359,41 @@ function getIndiInfo(ref,level,famNr,famCount) {
     }
     else if (level==1) {
         ret += (famCount>1) ? '#' + famNr + ' ' : '';
-        ret += indiName + '<br />' + (gebDat ? formatDate(gebDat,1) + '<br />' : '') + ( gebOrt ? gebOrt + '<br />' : '');
-        ret += (todDat ? (formatDate(todDat,2) + '<br />') : '');
-        ret += ( todOrt ? (todOrt + '<br />') : '') + '</div>';
+        ret += indiName + '<br><br /><b>Naissance : </b>' + (birthDate ? fmtDate(birthDate,1) + '<br />' : '') + ( birthPlace ? birthPlace + '<br />' : '');
+        ret += (deathDate ? '<b>Décès : </b>'+(fmtDate(deathDate,2) + '<br />') : '');
+        ret += ( deathPlace ? (deathPlace + '<br />') : '') + '</div>';
     }       
     else if (level>=2) {
-        if (level==5) ret += ' <span class="oo">oo</span>';
-        ret += indiName;
-        if ((level<=3) || (level==6)) ret += ' ' + (gebDat ? formatDate(gebDat,1) : '');
+        if (level==5) {
+			ret += ' <span class="oo">oo</span>';
+		}
+        ret += indiName+'&emsp;';
+		if ((level<=3) || (level==6)) ret += '<br>&emsp;'  + (birthDate ? birthDate : '?');
+		if ((level<=3) || (level==6)) ret += ' <b>&harr;</b> ' + (deathDate ? deathDate : '?')+'';
+//		if ((level<=3) || (level==6)) ret += ' '  + (birthDate ? ' - ' + formatDate(birthDate) : '-');
         ret += '</div>';
     }       
     return ret;   
 }
 
 function getFamInfo(fam) {
-    var marDat, marOrt;
-    var ret='<div>';
+    var marDate, marPlace;
+    var ret='<div><b>Mariage:</b> ';
     var mar = fam['MARR.0.'];
     if (mar) {
-        marDat=mar['DATE.0'];
-        marOrt=mar['PLAC.0'];
+        marDate=fmtDate(mar['DATE.0']);
+        marPlace=mar['PLAC.0'];
+		
+		if (marPlace) {
+			var lieux=marPlace.split(',');
+			if ((lieux.length)>=5) {
+				marPlace = '&emsp;'+lieux[0]+' ('+lieux[1].trim()+')<br>&emsp;'+lieux[4].trim();
+			} else {
+				marPlace = '-';
+			}
+		}
     }
-    ret += (marDat ? formatDate(marDat,3) + ' ' : '') + ( marOrt ? marOrt : '') + '</div>';
+    ret += (marDate ? fmtDate(marDate,3) + ' <br>' : '<br>') + ( marPlace ? marPlace : '') + '</div>';
     return ret;   
 }
 
@@ -468,10 +496,15 @@ function formatDate (d,sym) {
     if (sym>0) ret=' '.substr(sym,1) + ((sym==3) ? '<span>Mariage : </span>' : '');
     if (parts[2]!='') {
         var p1=mList.indexOf('.' + parts[2] + '.');
-        p1=p1/4+1;
-        var p2=d.indexOf(parts[2]);
-        if (p2==0) ret+= p1 + '.' + d.substr(4);
-        else ret+= d.substr(0,p2-1) + '.' + p1 + '.' + d.substr(p2+4);
+		if (p1 != -1) {
+			p1=p1/4+1;
+			var p2=d.indexOf(parts[2]);
+			if (p2==0) ret+= p1 + '.' + d.substr(4);
+			else ret+= d.substr(0,p2-1) + '.' + p1 + '.' + d.substr(p2+4);
+		} else {
+			ret = sym; //???
+			ret = d;
+		}
     }
     else ret+= d;
     return ret;
@@ -588,6 +621,7 @@ td {
     border : 0.1em solid #000;
     background-color:#FFBC93;
 	color:black;
+	vertical-align: top;
 }
 #g21,#g22,#g23,#g24 {
     min-height: 2em;
@@ -685,6 +719,23 @@ h1 {
     margin-right: 20%;
     margin-top: 20px;
 }
+h2 {
+    color: #white;
+    font-size: initial;
+}
+h3 {
+    font-size: small;
+    padding: 0px;
+    vertical-align: top;
+    margin-top: 4px;
+}
+.generation {
+    position: absolute;
+    top: 0px;
+    left: 10px;
+    background-color: #3e322b;
+    padding: 10px;
+}
 </style>     
 </head>
 <body onload="start()">
@@ -760,10 +811,8 @@ h1 {
         </tr>
         <tr><!-- Eltern -->
             <td colspan="4" id="g11"></td>
-            <td colspan="2" id="g12"></td>
-            <td id="g12p"><img id="p12" src=""></td>
-            <td id="g13p"><img id="p13" src=""></td>
-           <td colspan="2" id="g13"></td>
+            <td colspan="3" id="g12"></td>
+            <td colspan="3" id="g13"></td>
             <td colspan="4" id="g14"></td>
         </tr>
         <tr>
@@ -798,6 +847,8 @@ h1 {
         </tr>
         <tr>
             <td colspan="12" id="info">
+					<h2>Fiche détaillée :</h2>
+
                 <table id="tabInfo">
                     <col width="24%"/>
                     <col width="76%"/>
