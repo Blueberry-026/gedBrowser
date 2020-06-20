@@ -1,0 +1,774 @@
+<html>
+<head>
+
+<script language="Javascript" src="ged.js"></script>
+<script language="Javascript">
+var historyList = new Array();
+var lastHistory = -1;
+
+function start() {
+    var elem;
+    elem=document.getElementById('infoJavascript');
+    elem.style['display']='none';
+    if (params['title']) {
+        elem=document.getElementById('title');
+        elem.innerHTML=params['title'];
+    }
+//    if (params['stitle']) {
+//        elem=document.getElementById('stitle');
+//        elem.innerHTML=params['stitle'];
+//    }
+    if (params['hints']!='') {
+        elem=document.getElementById('hints');
+        elem.innerHTML=params['hints'].replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<break />');
+    }
+    else start1();
+}
+
+function start1(ind) {
+    var elem, ind;
+    elem=document.getElementById('infoPart');
+    elem.style['display']='none';
+    elem=document.getElementById('browserTab');
+    elem.style['visibility']='visible';
+    if (params['startWith']) showIndi('@I01883@'); //showIndi(params['startWith']);
+    else alert('No Individual-key found to start with.');
+}    
+
+function fmtLieu(src) {
+    var ind, ret, tmp;
+	
+	if (!src) return;
+	
+    var lieux=src.split(',');
+
+	if ((lieux.length)>=5) {
+		ret = '&emsp; '+lieux[0]+' ('+lieux[1].trim()+')<br>'+'&emsp; '+lieux[4].trim();
+	} else {
+		if (lieux.length>=1) {
+			ret = lieux[0];
+		} else {
+			ret = 'lieu non renseignÈ';
+		}
+	}
+    return ret;
+}
+
+function fmtDate(src) {
+    var sList= ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+    var fList= ['janv','fÈv','mars','avril','mai','juin','juil','aout','sept','oct','nov','dÈc'];
+    var jj,mm,aa,str,ind, ret, tmp;
+	
+	ret='- - -';
+	if (!src) return ret;
+	
+    var dt=src.split(' ');
+
+	if (dt[0]=='BEF') {
+		//
+		// Cas de la date 'before' : BEF 2222
+		//
+		ret = 'Avant ' + dt[dt.length-1];
+	} else if (dt[0]=='AFT') {
+		//
+		// Cas de la date 'after' : AFT 2222
+		//
+		ret = 'AprËs ' + dt[dt.length-1];
+	} else if (dt[0]=='BET') {
+		//
+		// Cas de la date 'between' : BET 2222 AND 3333
+		//
+		ret = 'Entre ' + dt[1] + ' et ' + dt[2];
+	} else if (dt[0]=='ABT') {
+		//
+		// Cas de la date 'environ' : ABT 2222
+		//
+		ret = 'Environ ' + dt[dt.length-1];
+	}
+	else if ((dt.length)==3) {
+		//
+		// Cas de la date exacte : 11 22 3333
+		//
+		var pos = sList.indexOf(dt[1]);	
+		if (pos != -1) {
+			ret = dt[0] + ' ' + fList[pos] + ' ' + dt[2];
+		} else {
+			ret = dt[0] + ' ' + dt[1] + ' ' + dt[2];
+		}
+	}
+	else if ((dt.length) == 1) {
+		//
+		// Cas de l'annÈe seule : 1111
+		//
+		ret = dt[0];
+	}
+	else if ((dt.length) == 2) {
+		//
+		// Cas du mois/annÈe : XXX 1111
+		//
+		var pos2 = sList.indexOf(dt[0]);	
+		if (pos2 != -1) {
+			ret = fList[pos2] + ' ' + dt[1];
+		} else {
+			ret = dt[0] + ' ' + dt[1];
+		}		
+	}
+    return ret;
+}
+
+function fmtFs(src) {
+    var ind, ret, tmp;
+    
+	var tmp=src.split(';');
+
+	ret=-'';
+	for (ind in tmp) {
+		ret = ret+'===>'+tmp[ind]+'<br>';
+		}
+	//ret = ret+'<br>';
+    return ret;
+}
+
+function getList(obj, key, suffix) { // returns an array with the values of all keys key + '.' + i + suffix
+    var ret = new Array();
+    var i = 0;
+    while (true) {
+        if (typeof(obj[key + '.' + i + suffix])=='undefined') return ret;
+        ret[i]=obj[key + '.' + i + suffix];
+        i++;
+    }
+    return ret;
+}
+    
+function showIndi(ref) { // show the indiviudal ref
+    var elem, elem1, indi, indi2, famList, famKey, fam, famInfo, childList, childKey, childInfo, spouse, spouseId, p;
+    indi=ged[ref + '.0.'];
+    if (!indi) {
+        alert('Individual with key ' + ref  + ' not found.');
+        return;
+    }
+    addHistory(ref);
+    var male=true;
+    if (indi['SEX.0']) male = (indi['SEX.0']=='M') || (indi['SEX.0']=='m');
+    elem = document.getElementById('title');
+    elem.innerHTML = 'Ahnenblatt von ' + indi['NAME.0'].replace(/\//g, '');
+    elem = document.getElementById( male ? 'g12' : 'g13');
+    elem.innerHTML = getIndiInfo(ref,1,0,1); // Person
+    showIndiPic(ref,male ? 'p12' : 'p13'); // picture
+    elem = document.getElementById( male ? 'g11' : 'g14');
+    elem.innerHTML = getSiblingsInfo(ref);
+    elem = document.getElementById( male ? 'g13' : 'g12');
+    elem.innerHTML='';
+    elem1 = document.getElementById( male ? 'g14' : 'g11');
+    elem1.innerHTML='';
+    famList=getList(indi,'FAMS','');
+    famInfo='';
+    childInfo='';
+    spouseId=0;
+    for (famKey in famList) {
+        fam=ged[famList[famKey] + '.0.'];
+        tmp = male ? 'WIFE.0' : 'HUSB.0';
+        if (fam[tmp]) {
+            indi2 = ged[fam[tmp] + '.0.'];
+            elem.innerHTML+=getIndiInfo(fam[tmp],1,1+(famKey-0), famList.length); // Gatte/Partner
+            elem1.innerHTML+=getSiblingsInfo(fam[tmp]);
+        }
+        if (famKey==0) {
+            famInfo=getFamInfo(fam);
+            spouse = indi2;
+            spouseId=fam[tmp];
+        }
+        childList=getList(fam,'CHIL','');
+        for (childKey in childList) {
+            childInfo+=getIndiInfo(childList[childKey],0,1+(famKey-0), famList.length); // Kinder
+        }
+    }
+    showIndiPic(spouseId,male ? 'p13' : 'p12');
+    elem = document.getElementById('ehe');
+    elem.innerHTML=famInfo;
+    elem = document.getElementById('childrenCol'); // IE does not support assigning innerHTML to a tbody; this is a workaround
+    p=elem.innerHTML.indexOf('<TBODY id=');
+    if (p<0) p=elem.innerHTML.indexOf('<tbody id=');
+    p=elem.innerHTML.indexOf('>',p);
+    childInfo=elem.innerHTML.substr(0,p+1) + childInfo + '</tbody></table>';
+    elem.innerHTML=childInfo;
+    //elem.innerHTML=childInfo;
+    assignValue(getObjKey(indi,'FAMC.0/HUSB.0'),2, male ? 1 : 3);
+    assignValue(getObjKey(indi,'FAMC.0/WIFE.0'),2, male ? 2 : 4);
+    assignValue(getObjKey(spouse,'FAMC.0/HUSB.0'),2, male ? 3 : 1);
+    assignValue(getObjKey(spouse,'FAMC.0/WIFE.0'),2, male ? 4 : 2);
+    assignValue(getObjKey(indi,'FAMC.0/HUSB.0'),3, male ? 1 : 3);
+    assignValue(getObjKey(indi,'FAMC.0/WIFE.0'),3, male ? 2 : 4);
+    assignValue(getObjKey(spouse,'FAMC.0/HUSB.0'),3, male ? 3 : 1);
+    assignValue(getObjKey(spouse,'FAMC.0/WIFE.0'),3, male ? 4 : 2);
+    elem=document.getElementById('lastVisits');
+    elem.innerHTML=getHistory();
+    elem=document.getElementById('info'); // IE does not support assigning innerHTML to a tbody; this is a workaround
+    p=elem.innerHTML.indexOf('<TBODY id=');
+    if (p<0) p=elem.innerHTML.indexOf('<tbody id=');
+    p=elem.innerHTML.indexOf('>',p);
+    elem.innerHTML=elem.innerHTML.substr(0,p+1) + getDetailInfo(indi,0,ref) + '</tbody></table>';
+}
+
+function getObjKey(base, path) {
+    var ind, ret, tmp;
+    var pathList=path.split('/');
+    if (!base) return;
+    obj=base;
+    for (ind in pathList) {
+        tmp=pathList[ind];
+        if (!obj[tmp]) return;
+        ret = obj[tmp];
+        obj=ged[ret + '.0.'];
+        if (!obj) return;
+    }
+    return ret;
+}
+
+function assignValue(key, level, nr) {
+    var elem=document.getElementById('g' + level + nr);
+    if (!key) elem.innerHTML='';
+    else if (level<3) elem.innerHTML=getIndiInfo(key,level,0,0);
+    else {
+        var obj=ged[key + '.0.'];
+        elem.innerHTML = getIndiInfo(getObjKey(obj,'FAMC.0/HUSB.0'),level,0,0) + getIndiInfo(getObjKey(obj,'FAMC.0/WIFE.0'),level,0,0);
+    }
+}
+
+function addHistory(ref) {
+    // global historyList, lastHistory
+    if (lastHistory==19) lastHistory=0;
+    else if (historyList.length<20) lastHistory=historyList.length;
+    else lastHistory++;
+    historyList[lastHistory]=getIndiInfo(ref,6,0,0);
+}
+        
+function getHistory() {
+    var ret,ind1, ind2;
+    ret='';
+    ind1=lastHistory;
+    for (ind2=0;ind2<historyList.length;ind2++) {
+        ret+=historyList[ind1];
+        if (ind1==0) ind1=historyList.length-1;
+        else ind1--;
+    }
+    return ret;
+}
+
+function showIndiPic(ref,elemName) { // returns
+    var elem, p, indi, objList, fName, suffix;
+    elem=document.getElementById(elemName);
+    elem.style['display']='none';
+    if (!ref) return;
+    indi=ged[ref + '.0.'];
+    if (!indi) return;
+    objList=getList(indi,'OBJE','.');
+    for (ind in objList) {
+        fName=objList[ind]['FILE.0'];
+        if (fName) {
+            p=fName.lastIndexOf('\\');
+            if (p>0) fName=fName.substr(p+1);
+            suffix=fName.substr(fName.length-4).toLowerCase();
+            if (suffix=='.jpg' || suffix=='.bmp' || suffix=='.tif' || suffix=='.gif') {
+                elem.src='img\\' + fName;
+                elem.style['display']='block';
+                break;
+            }
+        }
+    }
+}
+     
+            
+
+function getIndiInfo(ref,level,famNr,famCount) { // level=0 : Kinder, =1: Eltern, =2: Groﬂeletern, =3: Urgroﬂeltern, =4: Tante/Onkel, =5: deren Gatten/Partner; =6 history
+    var tmp, gebDat, gebOrt, todDat, todOrt, famList, famKey, fam;
+    if (!ref) return '';
+    var indi=ged[ref + '.0.'];
+    var jsFunc= '"javascript:showIndi(' + "'" + ref + "')" + '"';
+    var ret='<div class="div' + level + '">';
+    var indiName=indi['NAME.0'];
+    var p1 = indiName.indexOf('/');
+    var p2 = indiName.indexOf('/',p1+1);
+    if ((level!=5) && (p1>=0) && (p2>0)) indiName=indiName.substr(0,p1) + ( (level!=4) ? '<strong>' + indiName.substr(p1+1, p2-p1-1) + '</strong>' : '') + indiName.substr(p2+1);
+    else if ((p1>=0) && (p2>0)) indiName=indiName.substr(0,p1) + indiName.substr(p1+1, p2-p1-1) + indiName.substr(p2+1);
+    if (indiName.substr(indiName.length-1)==' ') indiName=indiName.substr(0,indiName.length-1);
+    if (level==4) indiName='<strong>' + indiName +'</strong>';
+    indiName='<a href=' + jsFunc + ' title="Wechsel zum Ahnenblatt dieser Person anzeigen">' + indiName + '</a>';
+    var geb = indi['BIRT.0.'];
+    if (geb) {
+        gebDat=geb['DATE.0'];
+        gebOrt=geb['PLAC.0'];
+    }
+    var tod = indi['DEAT.0.'];
+    if (tod) {
+        todDat=tod['DATE.0'];
+        todOrt=tod['PLAC.0'];
+    }
+    var male=true;
+    if (indi['SEX.0']) male = (indi['SEX.0']=='M') || (indi['SEX.0']=='m');
+    if (level==0) {
+        ret='<tr><td>' + ((famCount>1) ? famNr : '') + '</td><td>' + indiName + '</td><td>' + formatDate(gebDat,0) + '</td><td>' + ( gebOrt ? gebOrt : '');
+        ret+= '</td><td>' + formatDate(todDat,0) + '</td><td>' + ( todOrt ? todOrt : '') + '</td><td>';
+        famList=getList(indi,'FAMS','');
+        for (famKey in famList) {
+            fam=ged[famList[famKey] + '.0.'];
+            tmp = male ? 'WIFE.0' : 'HUSB.0';
+            if (fam[tmp]) {
+                ret+= getIndiInfo(fam[tmp],3,0,0);
+            }
+        }
+        ret+='</td></tr>';
+    }
+    else if (level==1) {
+        ret += (famCount>1) ? '#' + famNr + ' ' : '';
+        ret += indiName + '<br />' + (gebDat ? formatDate(gebDat,1) + '<br />' : '') + ( gebOrt ? gebOrt + '<br />' : '');
+        ret += (todDat ? (formatDate(todDat,2) + '<br />') : '');
+        ret += ( todOrt ? (todOrt + '<br />') : '') + '</div>';
+    }       
+    else if (level>=2) {
+        if (level==5) ret += ' <span class="oo">oo</span>';
+        ret += indiName;
+        if ((level<=3) || (level==6)) ret += ' ' + (gebDat ? formatDate(gebDat,1) : '');
+        ret += '</div>';
+    }       
+    return ret;   
+}
+
+function getFamInfo(fam) {
+    var marDat, marOrt;
+    var ret='<div>';
+    var mar = fam['MARR.0.'];
+    if (mar) {
+        marDat=mar['DATE.0'];
+        marOrt=mar['PLAC.0'];
+    }
+    ret += (marDat ? formatDate(marDat,3) + ' ' : '') + ( marOrt ? marOrt : '') + '</div>';
+    return ret;   
+}
+
+function getSiblingsInfo(ref) {
+    var indi, famKey, fam, childList, tmp, indiKey, famList1, famList2, ind1, ind2, ind3, ind1, male, ret, tmp;
+    ret='';
+    if (!ref) return '';
+    indi = ged[ref + '.0.'];
+    if (!indi) return '';
+    famKey=indi['FAMC' + '.0']; //family of parents
+    if (!famKey) return '';
+    fam = ged[famKey + '.0.'];
+    if (!fam) return '';
+    famList1=new Array();
+    famList1=getFAMS(fam,'HUSB.0',famList1);
+    famList1=getFAMS(fam,'WIFE.0',famList1);
+    for (ind1 in famList1) {
+        ret+='<div class="famSibling">';
+        if (famList1.length>1) ret+='ª';
+        fam=ged[famList1[ind1] + '.0.'];
+        childList = getList(fam,'CHIL','');
+        for (ind2 in childList) {           
+            indiKey=childList[ind2];
+            if (ind2>0) ret+='<div class="separator">,</div>';
+            ret+='<div class="sibling">';
+            if (indiKey==ref) ret+='*';
+            else {
+                ret+=getIndiInfo(indiKey,4,0,0);
+                indi=ged[indiKey + '.0.'];
+                male=true;
+                if (indi['SEX.0']) male = (indi['SEX.0']=='M') || (indi['SEX.0']=='m');
+                famList = getList(indi,'FAMS','');
+                for (ind1 in famList) {
+                    famKey=famList[ind1];
+                    fam = ged[famKey + '.0.'];
+                    indiKey=fam[male ? 'WIFE.0' : 'HUSB.0'];
+                    if (indiKey) ret+=getIndiInfo(indiKey,5,0,0);
+                }
+            }
+            ret+='</div>';
+        }
+        ret+='</div>';
+    }
+    return ret;   
+}
+
+function getFAMS(fam,spouse,famList) { // returns all fams in famList and all FAMSpouse of the person fa[spouse)
+    var ret, indi, famList, ind1, ind2, found, famKey;
+    ret=famList;
+    if (!fam[spouse]) return ret;
+    indi=ged[fam[spouse] + '.0.'];
+    if (!indi) return ret;
+    famList=getList(indi,'FAMS','');
+    for (ind1 in famList) {
+        famKey=famList[ind1];
+        found=false;
+        for (ind2 in ret) {
+            found = (ret[ind2]==famKey);
+            if (found) break;
+        } 
+        if (!found) ret[ret.length]=famKey;
+    }
+    return ret;
+}
+
+function getDetailInfo(obj, level, ref) {
+    var ret, obj, objKey, cont, obj1;
+    ret='';
+    for (objKey in obj) {
+       cont=obj[objKey];
+       if ((objKey.substr(0,5)!='CHIL.') && (objKey.substr(0,5)!='FAMC.') && (cont!=ref)) {
+            ret+='<tr><td style="padding-left:' + (level*2) + 'em">' + objKey.substr(0,4) +'</td>';
+            if (typeof(cont)=='object') ret+='</tr>' + getDetailInfo(cont,level+1,ref);
+            else if ((cont.substr(0,1)=='@') && (cont.substr(cont.length-1)=='@')) {
+                obj1=ged[cont+'.0'];
+                if (obj1 && (cont!=ref) && (obj1=='INDI')) {
+                    ret+='<td>' + getIndiInfo(cont,6,0,0) + '</td></tr>';
+                }
+                else {
+                    obj1=ged[cont + '.0.'];
+                    ret+='</tr>' + getDetailInfo(obj1,level+1,ref)
+                }
+            }
+            else ret+='<td>' + cont +'</td></tr>';
+        }
+    }
+    return ret;
+}
+            
+           
+    
+    
+    
+
+function formatDate (d,sym) {
+    if (!d) return '';
+    var mList= '.JAN.FEB.MAR.APR.MAY.JUN.JUL.AUG.SEP.OCT.NOV.DEC.';
+    var parts=d.match(/(\d*)\s*([A-Za-z]*)\s*(\d*)/);
+    var ret='';
+    if (sym>0) ret=' *+'.substr(sym,1) + ((sym==3) ? '<span class="oo">oo</span>' : '');
+    if (parts[2]!='') {
+        var p1=mList.indexOf('.' + parts[2] + '.');
+        p1=p1/4+1;
+        var p2=d.indexOf(parts[2]);
+        if (p2==0) ret+= p1 + '.' + d.substr(4);
+        else ret+= d.substr(0,p2-1) + '.' + p1 + '.' + d.substr(p2+4);
+    }
+    else ret+= d;
+    return ret;
+}
+function search() {
+    var ret, inp, dat, indi, erg, elem, p, gedKey;
+    var mList= '.JAN.FEB.MAR.APR.MAY.JUN.JUL.AUG.SEP.OCT.NOV.DEC.';
+    inp=prompt('Geben Sie bitte einen Namen(steil) (Vorname Nachname) oder ein Geburtsdatum (TT.MM.JJJJ) bzw. ein Geburtsjahr an.','')
+    if (!inp) return;
+    dat=inp.match(/(\d+)\.\s+(\d+)\.\s+(\d+)/);
+    if (dat) inp=dat[1] + ' ' + mList.substr(dat[2]*4-3,3) + dat[3];
+    else dat=inp.match(/(\d+)/);
+    inp=inp.toLowerCase();
+    ret='';
+    for (gedKey in ged) {
+        if ((gedKey.substr(0,1)=='@') && (gedKey.substr(gedKey.length-3,1)=='@')) {
+            if (ged[gedKey]=='INDI') {
+                indi=ged[gedKey+'.'];
+                erg=indi[dat ? 'BIRTH.0' : 'NAME.0'].replace(/\//,'');
+                if (dat && erg) erg=erg['DATE.0'];
+                if (erg) erg = erg.toLowerCase().indexOf(inp)+1;
+                if (erg) ret+=getIndiInfo(gedKey.substr(0,gedKey.length-2),6,0,0);
+            }
+        }
+    }
+    elem=document.getElementById('info'); // IE does not support assigning innerHTML to a tbody; this is a workaround
+    p=elem.innerHTML.indexOf('<TBODY id=');
+    if (p<0) p=elem.innerHTML.indexOf('<tbody id=');
+    p=elem.innerHTML.indexOf('>',p);
+    elem.innerHTML=elem.innerHTML.substr(0,p+1) + '<tr><td colspan="2">' + ret + '</td></tr></tbody></table>';
+}      
+        
+</script>
+<style>
+body {
+    font-size:1em;
+	font-family:Arial;
+    text-align:center;
+	background-color: #000;
+	color: white;
+	background-image: url('text.jpg');
+	background-repeat: no-repeat;
+	background-attachment: fixed; 
+	background-size: 100% 100%;
+}
+a, a:visited {
+    color:black;
+    text-decoration:none;
+    margin:0px;
+    padding:0px;
+}
+a:hover, a:active, a:focus {
+    color:white;
+    background-color: black;
+}
+#infoPart {
+    font-size:1em;
+}
+
+#browserTab {
+    width:100%;
+    empty-cells: show;
+    table-layout : fixed;
+    border-collapse : collapse;
+}
+tr {
+    margin:0px;
+    padding:0px;
+}
+td {
+    margin:0px;
+    text-align:left;
+    padding:10px;
+	font-size: small;
+}
+.borderl { 
+    border-left: 0.1em solid #fff;
+    height: 0.8em;
+}
+.borderb { 
+    border-bottom: 0.1em solid #fff;
+}
+.borderbl { 
+    border-left: 0.1em solid #fff;
+    border-bottom: 0.1em solid #fff;
+    height: 0.8em;
+}
+.borderbr { 
+    border-right: 0.1em solid #fff;
+    border-bottom: 0.1em solid #fff;
+    height: 0.8em;
+}
+[if IE] .borderl, .borderbl, .borderbr {
+    min-height: 0.8em;
+    height: auto;
+}
+#g31,#g32,#g33,#g34 {
+    min-height: 2em;
+    border : 0.1em solid #000;
+    background-color:#FFBC93;
+	color:black;
+}
+#g21,#g22,#g23,#g24 {
+    min-height: 2em;
+    border : 0.1em solid #000;
+    background-color:#D78F64;
+	color:black;
+}
+#g11,#g12, #g13, #g14, #g12p,#g13p {
+    min-height: 2em;
+    border : 0.1em solid #000;
+	background-color: #b0f2ac;
+	vertical-align: top;
+	color: black;
+}
+#g12,#g13,#g12p,#g13p {
+    background-color:#DEF2CF;
+	vertical-align: top;
+}
+#g12, #g13p {
+    border-width: 0.1em 0.3em 0.1em 0.1em;
+}
+#g12p, #g13 {
+    border-width: 0.1em 0.1em 0.1em 0em;
+}
+#p12, #p13 {
+    width:90%;
+}
+#p13 {
+    text-align:right;
+}
+#g0 {
+    min-height: 2em;
+    border : 0.1em solid #000;
+    background-color:#FFFFD2;
+}
+#children {
+    background-color:#babaaa;
+    width:100%;
+    empty-cells: show;
+    table-layout : fixed;
+    border-collapse : collapse;
+}
+#children * td {
+    border : 0.1em solid #000;
+    margin:0px;
+    padding:5px;
+	color: black;
+}
+#info {
+    min-height: 0em;
+    font-size:6px;
+    background-color:black;
+}
+#colHistory {
+    min-height: 2em;
+    background-color:#b0abab;
+    font-size:90%;
+    vertical-align:top;
+	color: white;
+}
+.oo {
+    letter-spacing:-0.3em;
+    padding-right: 0.3em;
+	color:black;
+}
+
+.famSibling * {
+    display:inline;
+}
+.separator {
+    padding-right: 0.5em;
+}
+.buttons {
+    text-align:left;
+}
+
+#tabInfo {
+    width:100%;
+    empty-cells: show;
+    table-layout : fixed;
+    border-collapse : collapse;
+}
+
+#tabInfo * td {
+    border: 0.1em solid #737373;
+    margin:0px;
+    padding:5px;
+    text-align:left;
+	color: gray;
+}
+h1 {
+    color: #b9ac9d;
+    background-color: #3e322b;
+    margin-left: 20%;
+    margin-right: 20%;
+    margin-top: 20px;
+}
+</style>     
+</head>
+<body onload="start()">
+    <h1 id="title">-</h1>
+    <div id="infoPart">
+        <div id="infoJavascript">
+			-
+		</div>
+        <div id="hints"></div>
+		<button onclick="start1('@19I@')">Entrez</button><br>
+		<a href="javascript:start1('@I01967@');">Hugues Capet</a> 
+		<a href="javascript:start1('@I04471@');">Guillaume le ConquÈrent</a> 
+		<a href="javascript:start1('@I05744@');">Clovis</a> 
+		<a href="javascript:start1('@I02497@');">Charlemagne</a> 
+		<br><br>
+		<img src="map.png" height="600"> 
+    </div>
+    <table id="browserTab" style="visibility:hidden">
+        <col width="10%"/>
+        <col width="10%"/>
+        <col width="2%"/>
+        <col width="2%"/>
+        <col width="10%"/>
+        <col width="10%"/>
+        <col width="5%"/>
+        <col width="5%"/>
+        <col width="10%"/>
+        <col width="10%"/>
+        <col width="2%"/>
+        <col width="2%"/>
+        <col width="10%"/>
+        <col width="10%"/>
+        <tr><!-- Urgroﬂeltern -->
+            <td colspan="2" id="g31"></td>
+            <td colspan="2"></td>
+            <td colspan="2" id="g32"></td>
+            <td colspan="2"></td>
+            <td colspan="2" id="g33"></td>
+            <td colspan="2"></td>
+            <td colspan="2" id="g34"></td>
+        </tr>
+        <tr>
+            <td></td>
+            <td colspan="4" class="borderl"></td>
+            <td colspan="4" class="borderl"></td>
+            <td colspan="4" class="borderl"></td>
+            <td class="borderl"></td>
+        </tr>
+        <tr><!-- Groﬂeltern -->
+            <td colspan="2" id="g21"></td>
+            <td colspan="2"></td>
+            <td colspan="2" id="g22"></td>
+            <td colspan="2"></td>
+            <td colspan="2" id="g23"></td>
+            <td colspan="2"></td>
+            <td colspan="2" id="g24"></td>
+        </tr>
+        <tr>
+            <td></td>
+            <td class="borderbl"></td>
+            <td colspan="2" class="borderb"></td>
+            <td class="borderbr"></td>
+            <td colspan="4"></td>
+            <td class="borderbl"></td>
+            <td colspan="2" class="borderb"></td>
+            <td class="borderbr"></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td colspan="5"></td>
+            <td colspan="4" class="borderl"></td>
+            <td colspan="5" class="borderl"></td>
+        </tr>
+        <tr><!-- Eltern -->
+            <td colspan="4" id="g11"></td>
+            <td colspan="2" id="g12"></td>
+            <td id="g12p"><img id="p12" src=""></td>
+            <td id="g13p"><img id="p13" src=""></td>
+           <td colspan="2" id="g13"></td>
+            <td colspan="4" id="g14"></td>
+        </tr>
+        <tr>
+            <td colspan="5"></td>
+            <td class="borderbl" colspan="4" id="ehe" ></td>
+            <td colspan="5" class="borderl"></td>
+        </tr>
+        <tr>
+            <td colspan="7"></td>
+            <td colspan="7" class="borderl"></td>
+        </tr>
+        <tr><!-- Kinder -->
+            <td colspan="14" id="childrenCol">
+                <table width="100%" id="children">
+                    <col width="2%">
+                    <col width="20%">
+                    <col width="8%">
+                    <col width="20%">
+                    <col width="8%">
+                    <col width="20%">
+                    <col width="22%">
+                    <tbody>
+                        <tr><td>#</td><td>Name</td><td>Geb.Datum</td><td>Geb.Ort</td><td>Sterb.Datum</td><td>Sterbeort</td><td>Partner</td></tr>
+                    </tbody>
+                    <tbody id="g0">
+                    </tbody>
+                </table>
+            </td>
+        </tr>
+        <tr>
+            <td colspan="14" class="buttons"><a href="javascript:search()" title="Person suchen">Suche</a></td>
+        </tr>
+        <tr>
+            <td colspan="12" id="info">
+                <table id="tabInfo">
+                    <col width="24%"/>
+                    <col width="76%"/>
+                    <tbody id="tbodyInfo">
+                    </tbody>
+                </table>
+            </td>
+            <td colspan="2" id="colHistory">Letzte Ahnenbl‰tter:<div id="lastVisits"></div></td>
+        </tr>
+    <table>   
+</body>
+
