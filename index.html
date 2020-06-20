@@ -67,7 +67,7 @@ function fmtDate(src) {
 		var dt=src.split(' ');
 	}
 	
-	ret='???';
+	ret='___';
 	if (dt[0]=='BEF') {
 		//
 		// Cas de la date 'before' : BEF 2222
@@ -82,7 +82,7 @@ function fmtDate(src) {
 		//
 		// Cas de la date 'between' : BET 2222 AND 3333
 		//
-		ret = 'Entre ' + dt[1] + ' et ' + dt[2];
+		ret = 'Entre ' + dt[1] + ' et ' + dt[3];
 	} else if (dt[0]=='ABT') {
 		//
 		// Cas de la date 'environ' : ABT 2222
@@ -145,7 +145,7 @@ function getList(obj, key, suffix) { // returns an array with the values of all 
 }
     
 function showIndi(ref) { // show the indiviudal ref
-    var elem, elem1, indi, indi2, famList, famKey, fam, famInfo, childList, childKey, childInfo, spouse, spouseId, p;
+    var elem, nte, elem1, indi, indi2, famList, famKey, fam, famInfo, childList, childKey, childInfo, spouse, spouseId, p;
 	var dbg;
 	
     indi=ged[ref + '.0.'];
@@ -161,6 +161,7 @@ function showIndi(ref) { // show the indiviudal ref
     elem = document.getElementById('title');
 	
 	var sosa='';
+	var gen='';
 	if (indi['_SOS.0']) {
 		sosa = indi['_SOS.0'].split(' ');
 		if (sosa.length == 2) {
@@ -171,7 +172,17 @@ function showIndi(ref) { // show the indiviudal ref
 	if (indi['OCCU.0']) {
 		sTitle = sTitle + '<h3>' + indi['OCCU.0'] + '</h3>'
 	}
-	sTitle = sTitle + '<h3><p class="generation">Génération ' + gen + '</p></h3>';
+	if (gen) {
+		sTitle = sTitle + '<h3><p class="generation">Génération ' + gen + '</p></h3>';
+	} else {
+		sTitle = sTitle + '<h3><p class="generation">Génération : Hors SOSA</p></h3>';
+	}
+	
+	if (indi['_BRC.0']) {
+		sTitle = sTitle + '<h3><p class="branche">Branche : ' + indi['_BRC.0'] + '</p></h3>';
+	} else {
+		sTitle = sTitle + '<h3><p class="branche">Branche : Hors SOSA</p></h3>';
+	}	
 	
     elem.innerHTML = sTitle;
     elem = document.getElementById( male ? 'g12' : 'g13');
@@ -229,7 +240,43 @@ function showIndi(ref) { // show the indiviudal ref
     p=elem.innerHTML.indexOf('<TBODY id=');
     if (p<0) p=elem.innerHTML.indexOf('<tbody id=');
     p=elem.innerHTML.indexOf('>',p);
+
+	var x=getNote(indi,0,ref);
+
+    nte = document.getElementById('colNotes');
+	nte.innerHTML = x;
+
     elem.innerHTML=elem.innerHTML.substr(0,p+1) + getDetailInfo(indi,0,ref) + '</tbody></table>';
+}
+
+function getNote(obj, level, ref) {
+    var ret, obj, objKey, cont, obj1, nte,ndx;
+    ret='';
+	nte='';
+	
+	if(obj['SOUR.0']) {
+		src = obj['SOUR.0'];
+		//nte += obj[src];
+		
+	    var sources = ged [src + '.0.'];
+		var text = sources['TEXT.0.'];
+
+		if (sources ['TEXT.0']) {
+			nte += sources['TEXT.0'];
+			if (sources['TEXT.0'].length < 245) {
+				nte += '<br>';
+			}
+		}
+		if (text) {
+			for (objText in text) {
+				nte += text[objText];
+				if (text[objText].length < 245) {
+					nte += '<br>';
+				}
+			}
+		}
+	}
+    return nte;
 }
 
 function getObjKey(base, path) {
@@ -331,17 +378,29 @@ function getIndiInfo(ref,level,famNr,famCount) {
     if (level==4) {
 		indiName='<strong>' + indiName +'</strong>';
 	}
-    indiName='<a href=' + jsFunc + ' title="Afficher le détail">' + indiName + '</a>';
+	
+	if (level==6) {
+		indiName='<a class="sombre" href=' + jsFunc + ' title="Afficher le détail">' + indiName + '</a>';
+	} else {
+		indiName='<a href=' + jsFunc + ' title="Afficher le détail">' + indiName + '</a>';
+	}
     var birth = indi['BIRT.0.'];
     if (birth) {
         birthDate=fmtDate(birth['DATE.0']);
     	birthPlace=fmtLieu(birth['PLAC.0']);
-    }
+    } else {
+        deathDate='___';
+    	deathPlace='___';
+	}
     var death = indi['DEAT.0.'];
     if (death) {
         deathDate=fmtDate(death['DATE.0']);
     	deathPlace=fmtLieu(death['PLAC.0']);
-    }
+    } else {
+        deathDate='___';
+    	deathPlace='___';
+	}
+
     var male=true;
     if (indi['SEX.0']) male = (indi['SEX.0']=='M') || (indi['SEX.0']=='m');
     if (level==0) {
@@ -368,8 +427,8 @@ function getIndiInfo(ref,level,famNr,famCount) {
 			ret += ' <span class="oo">oo</span>';
 		}
         ret += indiName+'&emsp;';
-		if ((level<=3) || (level==6)) ret += '<br>&emsp;'  + (birthDate ? birthDate : '?');
-		if ((level<=3) || (level==6)) ret += ' <b>&harr;</b> ' + (deathDate ? deathDate : '?')+'';
+		if ((level<=3) || (level==6)) ret += '<br>&emsp;'  + (birthDate ? birthDate : '___');
+		if ((level<=3) || (level==6)) ret += ' <b>&harr;</b> ' + (deathDate ? deathDate : '___')+'';
 //		if ((level<=3) || (level==6)) ret += ' '  + (birthDate ? ' - ' + formatDate(birthDate) : '-');
         ret += '</div>';
     }       
@@ -465,24 +524,27 @@ function getFAMS(fam,spouse,famList) { // returns all fams in famList and all FA
 }
 
 function getDetailInfo(obj, level, ref) {
-    var ret, obj, objKey, cont, obj1;
+    var ret, obj, objKey, cont, obj1, nte,ndx;
     ret='';
+	nte='';
     for (objKey in obj) {
        cont=obj[objKey];
        if ((objKey.substr(0,5)!='CHIL.') && (objKey.substr(0,5)!='FAMC.') && (cont!=ref)) {
             ret+='<tr><td style="padding-left:' + (level*2) + 'em">' + objKey.substr(0,4) +'</td>';
-            if (typeof(cont)=='object') ret+='</tr>' + getDetailInfo(cont,level+1,ref);
-            else if ((cont.substr(0,1)=='@') && (cont.substr(cont.length-1)=='@')) {
+            if (typeof(cont)=='object') {
+				ret+='</tr>' + getDetailInfo(cont,level+1,ref);
+			} else if ((cont.substr(0,1)=='@') && (cont.substr(cont.length-1)=='@')) {
                 obj1=ged[cont+'.0'];
                 if (obj1 && (cont!=ref) && (obj1=='INDI')) {
                     ret+='<td>' + getIndiInfo(cont,6,0,0) + '</td></tr>';
-                }
-                else {
+                } else {
                     obj1=ged[cont + '.0.'];
                     ret+='</tr>' + getDetailInfo(obj1,level+1,ref)
                 }
             }
-            else ret+='<td>' + cont +'</td></tr>';
+            else {
+				ret+='<td>' + cont +'</td></tr>';
+			}
         }
     }
     return ret;
@@ -571,10 +633,31 @@ a, a:visited {
     margin:0px;
     padding:0px;
 }
-a:hover, a:active, a:focus {
+
+a:hover, a:visited, a:active, a:focus {
     color:white;
     background-color: black;
 }
+
+.clair:link, .clair:visited, .clair:active {
+	color: #b9ac9d;
+	text-decoration: none;
+}
+.clair:hover {
+	color: #fff;
+	text-decoration: none;
+	background-color: #000;
+}
+.sombre:link, .clair:visited, .clair:active {
+	color: #b9ac9d;
+	text-decoration: none;
+}
+.sombre:hover {
+	color: #3e322b;
+	text-decoration: none;
+	background-color: #b9ac9d;
+}
+
 #infoPart {
     font-size:1em;
 }
@@ -592,8 +675,11 @@ tr {
 td {
     margin:0px;
     text-align:left;
-    padding:10px;
+	padding: 10px;
 	font-size: small;
+}
+#nopad {
+	padding: 0px;
 }
 .borderl { 
     border-left: 0.1em solid #fff;
@@ -677,10 +763,10 @@ td {
 }
 #colHistory {
     min-height: 2em;
-    background-color:#b0abab;
-    font-size:90%;
-    vertical-align:top;
-	color: white;
+    background-color: #000;
+    font-size: 90%;
+    vertical-align: top;
+    color: #fff;
 }
 .oo {
     letter-spacing:-0.3em;
@@ -713,11 +799,12 @@ td {
 	color: gray;
 }
 h1 {
-    color: #b9ac9d;
+    color: #fff;
     background-color: #3e322b;
     margin-left: 20%;
     margin-right: 20%;
     margin-top: 20px;
+	opacity:70%;
 }
 h2 {
     color: #white;
@@ -727,7 +814,37 @@ h3 {
     font-size: small;
     padding: 0px;
     vertical-align: top;
+    background-color: #3e322b;
     margin-top: 4px;
+    margin-left: 5%;
+    margin-right: 5%;
+    margin-top: 4px;	
+}
+h4 {
+    color: white;
+    background-color: #3e322b;
+    margin-left: 20%;
+    margin-right: 20%;
+	padding:20px;
+	text-align: left;
+	opacity:70%;
+}
+.texte {
+    color: white;
+    background-color: black;
+    margin-left: 5px;
+	text-align: center;
+    padding: 0px;	
+	font-size:x-small;
+    height: 0.8em;
+	margin-left:2px;
+	margin-right:2px;
+}
+#barreD {
+	    border-right: 0.1em solid #fff;
+}
+#barreG {
+	    border-left: 0.1em solid #fff;
 }
 .generation {
     position: absolute;
@@ -736,6 +853,18 @@ h3 {
     background-color: #3e322b;
     padding: 10px;
 }
+.branche {
+    position: absolute;
+    top: 0px;
+    right: 10px;
+    background-color: #3e322b;
+    padding: 10px;
+}
+.credit {
+    font-size: x-small;
+    color: #c2c2c2;
+}
+
 </style>     
 </head>
 <body onload="start()">
@@ -745,15 +874,19 @@ h3 {
 			-
 		</div>
         <div id="hints"></div>
-		<button onclick="start1('@19I@')">Entrez</button><br>
-		<a href="javascript:start1('@I01967@');">Hugues Capet</a> 
-		<a href="javascript:start1('@I04471@');">Guillaume le Conquérent</a> 
-		<a href="javascript:start1('@I05744@');">Clovis</a> 
-		<a href="javascript:start1('@I02497@');">Charlemagne</a> 
+		<button onclick="start1('@19I@')"> Parcourir </button><br>
 		<br><br>
-		<img src="map.png" height="600"> 
+		<img src="map.png" height="600" border="10px"> 
     </div>
-    <table id="browserTab" style="visibility:hidden">
+    <table id="browserTab" style="visibility:collapse">
+        <tr>
+            <td colspan="14" id="colNotes">
+				Notes : <br>
+			</td>
+            <!--
+				<td colspan="14" class="buttons"><a href="javascript:search()" title="Person suchen">Détail fiche GEDCOM :</a></td>
+			-->
+        </tr>
         <col width="10%"/>
         <col width="10%"/>
         <col width="2%"/>
@@ -768,7 +901,13 @@ h3 {
         <col width="2%"/>
         <col width="10%"/>
         <col width="10%"/>
-        <tr><!-- Urgroßeltern -->
+        <tr><!-- Libellés Arrière grands-parents -->
+            <td class="texte">Grands parents</td>            <td colspan="4"></td>
+            <td class="texte">Grands parents</td>            <td colspan="2"></td>
+            <td class="texte">Grands parents</td>            <td colspan="4"></td>
+            <td class="texte">Grands parents</td>
+        </tr>
+        <tr><!-- Arrière grands-parents -->
             <td colspan="2" id="g31"></td>
             <td colspan="2"></td>
             <td colspan="2" id="g32"></td>
@@ -784,7 +923,13 @@ h3 {
             <td colspan="4" class="borderl"></td>
             <td class="borderl"></td>
         </tr>
-        <tr><!-- Großeltern -->
+        <tr><!-- Libellés grands-parents -->
+            <td class="texte" id="barreD">Père</td>            <td colspan="4"></td>
+            <td class="texte" id="barreG">Mère</td>            <td colspan="2"></td>
+            <td class="texte" id="barreD">Père</td>            <td colspan="4"></td>
+            <td class="texte" id="barreG">Mère</td>
+		</tr>
+        <tr><!-- Grands-parents -->
             <td colspan="2" id="g21"></td>
             <td colspan="2"></td>
             <td colspan="2" id="g22"></td>
@@ -809,13 +954,19 @@ h3 {
             <td colspan="4" class="borderl"></td>
             <td colspan="5" class="borderl"></td>
         </tr>
-        <tr><!-- Eltern -->
+        <tr><!-- Libellés Parents -->
+            <td class="texte">Frères et soeurs</td>				<td colspan="4"></td>
+            <td class="texte" id="barreG">Conjoint</td>			<td colspan="2"></td>
+            <td class="texte" id="barreD">Conjointe</td>			<td colspan="4"></td>
+            <td class="texte">Frères et soeurs</td>
+        </tr>
+		<tr><!-- Parents -->
             <td colspan="4" id="g11"></td>
             <td colspan="3" id="g12"></td>
             <td colspan="3" id="g13"></td>
             <td colspan="4" id="g14"></td>
         </tr>
-        <tr>
+        <tr><!-- Mariage -->
             <td colspan="5"></td>
             <td class="borderbl" colspan="4" id="ehe" ></td>
             <td colspan="5" class="borderl"></td>
@@ -824,9 +975,14 @@ h3 {
             <td colspan="7"></td>
             <td colspan="7" class="borderl"></td>
         </tr>
-        <tr><!-- Kinder -->
-            <td colspan="14" id="childrenCol">
-                <table width="100%" id="children">
+        <tr><!-- Libellés Enfants -->
+            <td colspan="2" class="texte">Enfants</td>
+            <td colspan="5"></td>
+			<td class="borderl"></td>
+        </tr>
+        <tr padding="0px" id="nopad"><!-- Enfants -->
+            <td colspan="14" id="childrenCol" style="padding-top:0px; padding-bottom:100px; padding-left: 0px;">
+                <table width="100%" id="children"  padding="0px">
                     <col width="2%">
                     <col width="20%">
                     <col width="8%">
@@ -843,21 +999,43 @@ h3 {
             </td>
         </tr>
         <tr>
-            <td colspan="14" class="buttons"><a href="javascript:search()" title="Person suchen">Détail fiche GEDCOM :</a></td>
-        </tr>
-        <tr>
-            <td colspan="12" id="info">
+            <td colspan="3" id="colHistory">
+				<h2>Historique de consultation :</h2><br><br><div id="lastVisits"></div>
+			</td>
+
+            <td colspan="11" id="info" valign="top">
 					<h2>Fiche détaillée :</h2>
 
                 <table id="tabInfo">
-                    <col width="24%"/>
-                    <col width="76%"/>
+                    <col width="200"/>
+                    <col/>
                     <tbody id="tbodyInfo">
                     </tbody>
                 </table>
             </td>
-            <td colspan="2" id="colHistory">Récemment consultés :<br><br><div id="lastVisits"></div></td>
         </tr>
     <table>   
+    <h4>
+		Quelques rapports : 
+		<a class="clair" target="_blank" href="pdf\Cousins Michelard.pdf">Cousins Michelard</a> - 
+		<a class="clair" target="_blank" href="pdf\Arbre d'ascendance MICHELARD.pdf"> Ascendants MICHELARD  </a> - 
+		<a class="clair" target="_blank" href="pdf\Arbre d'ascendance NOHARET.pdf">   Ascendants NOHARET    </a> - 
+		<a class="clair" target="_blank" href="pdf\Arbre d'ascendance COUDERC.pdf">   Ascendants COUDERC    </a> - 
+		<a class="clair" target="_blank" href="pdf\Arbre d'ascendance GADILHE.pdf">   Ascendants GADILHE    </a> - 
+    </h4>
+    <h4 id="bottom">
+		Personnages historiques : 
+		<a class="clair" href="javascript:start1('@I04963@');">Dagobert [1er] des Francs</a> - 
+		<a class="clair" href="javascript:start1('@I01967@');">Hugues Capet</a> - 
+		<a class="clair" href="javascript:start1('@I04471@');">Guillaume le Conquérant</a> - 
+		<a class="clair" href="javascript:start1('@I05744@');">Clovis</a>  - 
+		<a class="clair" href="javascript:start1('@I06005@');">Diane de Poitier</a>  - 
+		<a class="clair" href="javascript:start1('@I02497@');">Charlemagne</a> - 
+		<a class="clair" href="javascript:start1('@I05312@');">Le Cid</a> - 
+		<a class="clair" href="javascript:start1('@I03020@');">Léon de Constantinople</a> - 
+		<a class="clair" href="javascript:start1('@I02668@');">Wadomaire d'Alémanie</a> - 
+		<a class="clair" href="javascript:start1('@I05704@');">Sainte Thérèse Couderc</a> - 
+	</h4>
+	<p class="credit">Généré avec une version modfiée de <a class="clair" href="https://sourceforge.net/projects/gedbrowser/">gedBrowser</a></p>
 </body>
 
