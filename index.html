@@ -120,19 +120,6 @@ function fmtDate(src) {
     return ret;
 }
 
-function fmtFs(src) {
-    var ind, ret, tmp;
-    
-	var tmp=src.split(';');
-
-	ret=-'';
-	for (ind in tmp) {
-		ret = ret+'===>'+tmp[ind]+'<br>';
-		}
-	//ret = ret+'<br>';
-    return ret;
-}
-
 function getList(obj, key, suffix) { // returns an array with the values of all keys key + '.' + i + suffix
     var ret = new Array();
     var i = 0;
@@ -681,8 +668,21 @@ td {
 #nopad {
 	padding: 0px;
 }
+.noborder { 
+	border: none;
+    border-right: none;
+    border-left: none;
+    border-top: none;
+    border-bottom: none;
+}
 .borderl { 
     border-left: 0.1em solid #fff;
+    height: 0.8em;
+}
+.borderlrb { 
+    border-right: 0.1em solid #fff;
+    border-left: 0.1em solid #fff;
+    border-bottom: 0.1em solid #fff;
     height: 0.8em;
 }
 .borderb { 
@@ -702,16 +702,16 @@ td {
     min-height: 0.8em;
     height: auto;
 }
+
 #g31,#g32,#g33,#g34 {
     min-height: 2em;
-    border : 0.1em solid #000;
     background-color:#FFBC93;
 	color:black;
 	vertical-align: top;
 }
+
 #g21,#g22,#g23,#g24 {
     min-height: 2em;
-    border : 0.1em solid #000;
     background-color:#D78F64;
 	color:black;
 }
@@ -805,6 +805,7 @@ h1 {
     margin-right: 20%;
     margin-top: 20px;
 	opacity:70%;
+	border-radius: 25px;
 }
 h2 {
     color: #white;
@@ -839,6 +840,7 @@ h4 {
     height: 0.8em;
 	margin-left:2px;
 	margin-right:2px;
+	border-radius: 25px;
 }
 #barreD {
 	    border-right: 0.1em solid #fff;
@@ -902,18 +904,15 @@ h4 {
         <col width="10%"/>
         <col width="10%"/>
         <tr><!-- Libellés Arrière grands-parents -->
-            <td class="texte">Grands parents</td>            <td colspan="4"></td>
-            <td class="texte">Grands parents</td>            <td colspan="2"></td>
-            <td class="texte">Grands parents</td>            <td colspan="4"></td>
+            <td class="texte">Grands parents</td>				<td colspan="4"></td>
+            <td class="texte">Grands parents</td>				<td colspan="2"></td>
+            <td class="texte">Grands parents</td>				<td colspan="4"></td>
             <td class="texte">Grands parents</td>
         </tr>
         <tr><!-- Arrière grands-parents -->
-            <td colspan="2" id="g31"></td>
-            <td colspan="2"></td>
-            <td colspan="2" id="g32"></td>
-            <td colspan="2"></td>
-            <td colspan="2" id="g33"></td>
-            <td colspan="2"></td>
+            <td colspan="2" id="g31"></td>						<td colspan="2" class="noborder"></td>
+            <td colspan="2" id="g32"></td>						<td colspan="2"></td>
+            <td colspan="2" id="g33"></td>						<td colspan="2"></td>
             <td colspan="2" id="g34"></td>
         </tr>
         <tr>
@@ -924,40 +923,34 @@ h4 {
             <td class="borderl"></td>
         </tr>
         <tr><!-- Libellés grands-parents -->
-            <td class="texte" id="barreD">Père</td>            <td colspan="4"></td>
-            <td class="texte" id="barreG">Mère</td>            <td colspan="2"></td>
-            <td class="texte" id="barreD">Père</td>            <td colspan="4"></td>
+            <td class="texte" id="barreD">Père</td>				<td colspan="4"></td>
+            <td class="texte" id="barreG">Mère</td>				<td colspan="2"></td>
+            <td class="texte" id="barreD">Père</td>				<td colspan="4"></td>
             <td class="texte" id="barreG">Mère</td>
 		</tr>
         <tr><!-- Grands-parents -->
-            <td colspan="2" id="g21"></td>
-            <td colspan="2"></td>
-            <td colspan="2" id="g22"></td>
-            <td colspan="2"></td>
-            <td colspan="2" id="g23"></td>
-            <td colspan="2"></td>
+            <td colspan="2" id="g21"></td>						<td colspan="2"></td>
+            <td colspan="2" id="g22"></td>						<td colspan="2"></td>
+            <td colspan="2" id="g23"></td>						<td colspan="2"></td>
             <td colspan="2" id="g24"></td>
         </tr>
         <tr>
             <td></td>
-            <td class="borderbl"></td>
-            <td colspan="2" class="borderb"></td>
-            <td class="borderbr"></td>
-            <td colspan="4"></td>
-            <td class="borderbl"></td>
-            <td colspan="2" class="borderb"></td>
+            <td class="borderbl"></td>							<td colspan="2" class="borderb"></td>
+            <td class="borderbr"></td>							<td colspan="4"></td>
+            <td class="borderbl"></td>							<td colspan="2" class="borderb"></td>
             <td class="borderbr"></td>
             <td></td>
         </tr>
         <tr>
             <td colspan="5"></td>
             <td colspan="4" class="borderl"></td>
-            <td colspan="5" class="borderl"></td>
+            <td colspan="4" class="borderl"></td>
         </tr>
         <tr><!-- Libellés Parents -->
             <td class="texte">Frères et soeurs</td>				<td colspan="4"></td>
             <td class="texte" id="barreG">Conjoint</td>			<td colspan="2"></td>
-            <td class="texte" id="barreD">Conjointe</td>			<td colspan="4"></td>
+            <td class="texte" id="barreD">Conjointe</td>		<td colspan="4"></td>
             <td class="texte">Frères et soeurs</td>
         </tr>
 		<tr><!-- Parents -->
@@ -968,8 +961,8 @@ h4 {
         </tr>
         <tr><!-- Mariage -->
             <td colspan="5"></td>
-            <td class="borderbl" colspan="4" id="ehe" ></td>
-            <td colspan="5" class="borderl"></td>
+            <td class="borderlrb" colspan="4" id="ehe" ></td>
+            <td colspan="4"></td>
         </tr>
         <tr>
             <td colspan="7"></td>
