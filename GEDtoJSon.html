@@ -1,0 +1,133 @@
+<html>
+<head>
+<script language="Javascript">
+    var lines;      // array of gedcom-lines
+    var ind;        // index into lines
+    var firstIndi;  // key of the first individual
+    var files;      // copy-commands for files
+
+    function assignGED(level) { // returns an object with all the objects of the given level
+        // global lines, ind, firstIndi
+        var ret, gedkey, gedcont, keyIndex, line, parts, subobjects;
+        gedkey='';
+        keyIndex = new Object; // last index of a key      
+        while (true) {
+            if (ind>=lines.length) return ret;
+            line=lines[ind];
+            parts=line.match(/(\d+)[ ]+([A-Za-z0-9@_]+)\s*(.*)/);
+            if (parts) {
+                if ((parts[1]-0)<level) return ret;
+                if (parts[1]>level) {
+                    alert('Level ' + level + 'expected at line ' + (ind+1) + '; line=' + line);
+                    return false;
+                }
+                if ((parts[2].substr(0,4)=='CONC') && (gedkey=='')) parts[2]='CONT';
+                if (parts[2].substr(0,4)=='FILE') files+='copy "' + parts[3] + '" .' + "\n";
+                if (parts[2].substr(0,4)=='CONC') {
+                    if (!ret) ret=new Object;
+                    if (typeof(keyIndex[gedkey])=='undefined') {
+                        keyIndex[gedkey]=0;
+                        ret[gedkey + '.' + keyIndex[gedkey]] += parts[3];
+                    }
+                    else ret[gedkey + '.' + keyIndex[gedkey]]+=parts[3]; // append to the last gedcont
+                    ind++;
+                }
+                else {
+                    gedkey=parts[2];
+                    if (gedkey.substr(0,1)!='@') gedkey=gedkey.substr(0,4);
+                    gedcont=false;
+                    if (parts[3]!='') gedcont=parts[3];
+                    if ((!firstIndi) && (gedcont=='INDI') && (gedkey.substr(0,1)=='@')) firstIndi=gedkey;
+                    ind++;
+                    subobjects=assignGED(level+1);
+                    if ((gedcont!==false) || subobjects){
+                        if (typeof(keyIndex[gedkey])=='undefined') keyIndex[gedkey]=0;
+                        else keyIndex[gedkey]++;
+                        if (!ret) ret=new Object;
+                        if (gedcont!==false) ret[gedkey + '.' + keyIndex[gedkey]] = gedcont;
+                        if (subobjects) ret[gedkey + '.' + keyIndex[gedkey] + '.'] = subobjects;
+                    }
+                }
+            }
+            else ind++;
+        }
+    }
+
+    function asJS(obj, level) {
+        var i,ret, ret1;
+        if (typeof(obj)=='string') return "'" + obj.replace(/[\\]/g,'\\\\').replace(/\r/g,'').replace(/[']/g,"\\'").replace(/\n/g,'\\n') + "'";
+        else {
+           ret1='';
+           for (i=0;i<level;i++) ret1+='   ';
+           ret='';
+           for (i in obj) ret+= ((ret=='') ? '' : ',') + "\n" + ret1 + "'" + i + "': " + asJS(obj[i],level+1);
+           return '{' + ret + "\n" + ret1 + '}';
+        }
+    }       
+    
+    function convert() {
+        // global lines, ind, firstIndi
+        var elem, inData, ged, params;
+        elem=document.getElementById('in');
+        inData=elem.value.replace(/\r/g,'');
+        if (inData=='') {
+            alert('Please, cut and paste your GED file into the input window first');
+            return;
+        }
+        lines=inData.split('\n');
+        inData='';
+        ind=0;
+        files='';
+        ged=assignGED(0);
+        params={};
+        elem=document.getElementById('title');
+        if (elem.value!='') params['title']=elem.value;
+        elem=document.getElementById('startWith');
+        if ((elem.value=='') && firstIndi) params['startWith']=firstIndi;
+        else if (ged[elem.value + '.0.']) params['startWith']=elem.value;
+        else {
+            alert('Start-with individuum ' + elem.value + ' not found. ' + firstIndi + 'is used.');
+            params['startWith']=firstIndi;
+        }
+        elem=document.getElementById('hints');
+        if (elem.value!='') params['hints']=elem.value;     
+        elem=document.getElementById('out');
+        elem.value='var ged=' + asJS(ged,0) + ";\n";
+        elem.value+='var params=' + asJS(params,0) + ";\n";
+        elem=document.getElementById('imgcopy');
+        elem.value=files;
+        alert('Finished');
+    }
+
+
+
+</script>
+</head>
+<body>
+    <h1>GEDtoJSon</h1>
+    <h2>Convert gedcom-format to JSON</h2>
+    <p><i>by J. Klocker</i></p>
+    <p>Cut and paste the lines of your gedcom-file into the following area. Fill in the other input-fields
+        and press the convert button. The results in the JSON-format will be shown in the output window. 
+        After the data is converted, select all the lines in the output window and copy them to the file ged.js,
+        replacing the old file-content.  
+        You can then use GEDBrowser.html to browse the data.
+    </p>
+    <label>Gedcom-content:</label><br />
+    <textarea id="in" value="" rows="14" cols="80"></textarea><br />
+    <label>Start-with individuum (optional):</label><br />
+    <input type="text" id="startWith" value="" size="80"/><br />
+    <label>title:</label><br />
+    <input type="text" id="title" value="Ahnendaten der Verwandtschaft ..." size="80" /><br />
+    <label>conditions to accept by user before using (optional):</label><br />
+    <textarea id="hints" value="" rows="14" cols="80">Diese Daten dürfen ausschließlich von Nachkommen der im Titel genannten Personen sowie von den Gatten/Lebenspartnern dieser Nachkommen zu privaten Zwecken verwendet werden.
+Auch eine Weitergabe ist ausschließlich an die vorhin genannten Personegruppe erlaubt.
+Ausdrücklich verboten ist eine Veröffentlichung der Daten (z.B. im Internet), zu welchem Zweck auch immer.
+Hinweise und Ergänzungen zu den Daten bitte an ... richten.
+    </textarea><br />
+    <input type="button" onclick="convert()" value="Convert"><br />
+    <label>Gedcom-content as JSon-Object:</label><br />
+    <textarea id="out" value="" rows="14" cols="80"></textarea><br />
+    <textarea id="imgcopy" value="" rows="14" cols="80"></textarea><br />
+</body>
+</html>
